@@ -26,4 +26,4 @@ const InterviewSchema = new mongoose.Schema({
 
 
 const Interview = mongoose.model('Interview', InterviewSchema);
-module.exports = Interview;
+export default Interview;

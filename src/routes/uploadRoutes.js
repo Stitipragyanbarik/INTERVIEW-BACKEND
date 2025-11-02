@@ -1,9 +1,27 @@
 import express from 'express';
-import { uploadVideo } from '../controllers/uploadController.js';
+import { 
+    uploadVideo, 
+    getUserVideos, 
+    getVideoById, 
+    startProcessing, 
+    completeAnalysis, 
+    failProcessing 
+} from '../controllers/uploadController.js';
 
 const router = express.Router();
 
-// Video upload route
-router.post('/upload/video', uploadVideo);
+// Upload video + create session
+router.post('/upload', uploadVideo);
+
+// Get all videos for logged-in user
+router.get('/', getUserVideos);
+
+// Get single video
+router.get('/:id', getVideoById);
+
+// Update session status
+router.patch('/:id/start', startProcessing);
+router.patch('/:id/complete', completeAnalysis);
+router.patch('/:id/fail', failProcessing);
 
 export default router;
