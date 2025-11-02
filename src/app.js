@@ -8,7 +8,7 @@ import uploadRoutes from "./routes/uploadRoutes.js";
 dotenv.config();
 
 // Connect to MongoDB
-connectDB();
+// connectDB();
 
 const app = express();
 
