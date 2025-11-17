@@ -51,7 +51,7 @@ export const uploadVideo = [
 
             const newInterview = await Interview.create({
                 user_id: req.user._id,
-                video_url: req.file.path, 
+                video_url: req.file.path,  // change this when using cloud storage
                 status: 'recorded',
             });
 
