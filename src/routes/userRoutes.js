@@ -6,5 +6,5 @@ const router = express.Router();
 
 // Protected route — only logged-in users can access
 router.get("/profile", authMiddleware, getUserProfile);
-
 export default router;
+

@@ -17,6 +17,18 @@ const app = express();
 // Middleware
 app.use(express.json());
 
+// CORS middleware for emotion detection
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(200);
+  } else {
+    next();
+  }
+});
+
 app.get("/", (req, res) => {
   res.send("Welcome to the Backend Server ");
 });

@@ -2,6 +2,8 @@ import Interview from '../models/Interview.js';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import axios from 'axios';
+import FormData from 'form-data';
 
 // Ensure temp directory exists
 const tempDir = path.join(process.cwd(), 'temp');
@@ -20,14 +22,29 @@ const storage = multer.diskStorage({
     }
 });
 
-// File filter (videos only)
+// File filter (videos only for upload, images for emotion detection)
 const fileFilter = (req, file, cb) => {
-    const allowedTypes = /mp4|avi|mov|wmv|flv|mkv|webm/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
+    console.log(`File filter: fieldname=${file.fieldname}, mimetype=${file.mimetype}, originalname=${file.originalname}`);
+    if (req.originalUrl.includes('/predict_emotion')) {
+        // Allow image files for emotion detection - relax filters for debugging
+        const allowedImageMimes = /image\/.*/;
+        const allowedImageExts = /\.(jpeg|jpg|png|gif|bmp|tiff)$/i;
+        const extname = allowedImageExts.test(path.extname(file.originalname).toLowerCase());
+        const mimetype = allowedImageMimes.test(file.mimetype);
 
-    if (mimetype && extname) cb(null, true);
-    else cb(new Error('Only video files are allowed!'), false);
+        console.log(`Emotion detection: extname=${extname}, mimetype=${mimetype}`);
+        if (mimetype || extname) cb(null, true);  // Allow if either matches
+        else cb(new Error('Only image files are allowed for emotion detection!'), false);
+    } else {
+        // Allow video files for upload
+        const allowedVideoMimes = /video\/(mp4|avi|mov|wmv|flv|mkv|webm)/;
+        const allowedVideoExts = /\.(mp4|avi|mov|wmv|flv|mkv|webm)$/i;
+        const extname = allowedVideoExts.test(path.extname(file.originalname).toLowerCase());
+        const mimetype = allowedVideoMimes.test(file.mimetype);
+
+        if (mimetype && extname) cb(null, true);
+        else cb(new Error('Only video files are allowed!'), false);
+    }
 };
 
 const upload = multer({
@@ -128,3 +145,50 @@ export const failProcessing = async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 };
+
+// Emotion Detection Proxy
+export const predictEmotion = [
+    upload.single('file'),  // This expects 'file' field
+    async (req, res) => {
+        try {
+            if (!req.file) {
+                return res.status(400).json({ message: 'No image file uploaded' });
+            }
+
+            // Read the uploaded image file
+            const imageBuffer = fs.readFileSync(req.file.path);
+
+            // Prepare form data for the FastAPI server
+            const formData = new FormData();
+            formData.append('file', imageBuffer, { filename: 'frame.jpg', contentType: 'image/jpeg' });
+
+            // Send request to FastAPI emotion detection API
+            const response = await axios.post('http://127.0.0.1:8000/predict_emotion/', formData, {
+                headers: {
+                    ...formData.getHeaders(),
+                },
+                timeout: 10000, // 10 seconds timeout
+            });
+
+            // Clean up the temporary file
+            fs.unlinkSync(req.file.path);
+
+            // Return the response from FastAPI
+            res.status(200).json(response.data);
+        } catch (error) {
+            console.error('Emotion prediction error:', error.message);
+
+            // Clean up the temporary file if it exists
+            if (req.file && fs.existsSync(req.file.path)) {
+                fs.unlinkSync(req.file.path);
+            }
+
+            if (error.response) {
+                // Forward the error from FastAPI
+                res.status(error.response.status).json(error.response.data);
+            } else {
+                res.status(500).json({ message: 'Failed to connect to emotion detection service' });
+            }
+        }
+    }
+];

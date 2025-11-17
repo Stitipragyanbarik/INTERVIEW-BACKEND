@@ -10,7 +10,10 @@ router.post('/register', [
   body('username').isLength({ min: 3 }).withMessage('Username must be at least 3 characters'),
   body('email').isEmail().withMessage('Please provide a valid email'),
   body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+
   body("role").optional().isIn(["student","campany"]).withMessage("Role must be either student or campany"),
+
+  body("role").optional().isIn(["student","campany"]).withMessage("Role must be either student or company"),
 ], validate, register);
 
 // Login route
